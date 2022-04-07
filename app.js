@@ -1,41 +1,65 @@
 const { WebClient } = require("@slack/web-api");
-
-const token = process.env.SLACK_TOKEN;
-
-const web = new WebClient(token);
-
 const { createEventAdapter } = require("@slack/events-api");
-const slackEvents = createEventAdapter(process.env.SLACK_SIGNING_SECRET);
-const port = process.env.PORT || 3000;
 
-// Attach listeners to events by Slack Event "type". See: https://api.slack.com/events/message.im
-slackEvents.on("message", (event) => {
-  console.log("event.channel", event.channel);
-  console.log(
-    `Received a message event: user ${event.user} in channel ${event.channel} says ${event.text}`
-  );
-});
+const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
+const slackToken = process.env.SLACK_TOKEN;
+const port = process.env.SLACK_PORT || 3000;
+
+const slackEvents = createEventAdapter(slackSigningSecret);
+const slackClient = new WebClient(slackToken);
+
+function sendMessage({ channel, text }) {
+  (async () => {
+    try {
+      await slackClient.chat.postMessage({
+        channel,
+        text,
+      });
+    } catch (error) {
+      console.log(error.data);
+    }
+  })();
+}
 
 slackEvents.on("app_mention", (event) => {
-  console.log("event.channel", event.channel);
+  const messageFromUser = event.text;
+  const user = event.user;
 
-  (async () => {
-    // See: https://api.slack.com/methods/chat.postMessage
-    const res = await web.chat.postMessage({
+  // TODO: get the user list
+  if (messageFromUser.includes("給我名單")) {
+    sendMessage({
       channel: event.channel,
-      text: "Hello there",
+      text: `蛤 給你拉`,
     });
 
-    // `res` contains information about the posted message
-    console.log("Message sent: ", res.ts);
-  })();
+    return;
+  }
+
+  if (!messageFromUser.toLowerCase().includes("參加")) {
+    (async () => {
+      const info = await slackClient.users.info({
+        user: event.user,
+      });
+      console.log("info", info.user.profile);
+    })();
+
+    sendMessage({
+      channel: event.channel,
+      text: `誒？ <@${user}>! 哩公啥？`,
+    });
+
+    return;
+  }
+
+  // TODO: add into the list
+  sendMessage({
+    channel: event.channel,
+    text: `Hello <@${user}>! YOU ARE IN :tada:`,
+  });
 });
 
-// Handle errors (see `errorCodes` export)
 slackEvents.on("error", console.error);
 
-// Start a basic HTTP server
 slackEvents.start(port).then(() => {
-  // Listening on path '/slack/events' by default
-  console.log(`server listening on port ${port}`);
+  console.log(`Server started on port ${port}`);
 });
