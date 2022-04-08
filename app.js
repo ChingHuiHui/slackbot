@@ -3,6 +3,17 @@ require("dotenv").config();
 const { WebClient } = require("@slack/web-api");
 const { createEventAdapter } = require("@slack/events-api");
 
+const { Client } = require("@notionhq/client");
+
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+
+(async () => {
+  const databaseId = "f0b809b5ace6417d801baf7089eae6cf";
+  // const response = await notion.databases.retrieve({ database_id: databaseId });
+  const { results } = await notion.users.list();
+  console.log(_.map(results, (item) => item?.person?.email || 132));
+})();
+
 const { GraphQLClient, gql } = require("graphql-request");
 const _ = require("lodash");
 const moment = require("moment");
