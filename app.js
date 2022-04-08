@@ -171,7 +171,8 @@ slackEvents.on("app_mention", (event) => {
         user: event.user,
       });
       console.log("info", info.user.profile);
-      const bot = await slackClient.bots.info();
+
+      console.log(await slackClient.users.list());
 
       console.log(
         await slackClient.conversations.members({ channel: event.channel })
